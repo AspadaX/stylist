@@ -8,6 +8,7 @@ use dim::{
     vectorizations::vectorize_image_concurrently,
 };
 use image::DynamicImage;
+use serde::{Deserialize, Serialize};
 
 /// Error variants related to DataEntry operations
 #[derive(Debug, Clone, Copy)]
@@ -27,7 +28,7 @@ impl Display for DataEntryErrors {
 }
 
 /// Represents a single data entry in the vector store
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct DataEntry {
     /// Unique identifier for the data entry
     pub id: usize,
@@ -86,7 +87,7 @@ pub struct InMemoryVectorStore {
     /// Size of prompts to use
     prompt_size: usize,
     /// Dimension of the vectors
-    dimensions: usize
+    dimensions: usize,
 }
 
 impl InMemoryVectorStore {
@@ -108,7 +109,7 @@ impl InMemoryVectorStore {
             prompts: prompts,
             prompt_size: prompt_size,
             prompt_annotations: prompt_annotations,
-            dimensions: dimensions
+            dimensions: dimensions,
         }
     }
 
@@ -149,13 +150,11 @@ impl InMemoryVectorStore {
         }
 
         // Calculate similarities and store with indices
-        let mut similarities: Vec<(usize, f64)> = self.data_entries
+        let mut similarities: Vec<(usize, f64)> = self
+            .data_entries
             .iter()
             .enumerate()
-            .map(|(idx, entry)| (
-                idx,
-                self.cosine_similarity(&query_vector, &entry.vector)
-            ))
+            .map(|(idx, entry)| (idx, self.cosine_similarity(&query_vector, &entry.vector)))
             .collect();
 
         // Sort by similarity score in descending order
@@ -174,17 +173,17 @@ impl InMemoryVectorStore {
 
         Ok(top_entries)
     }
-    
+
     // Helper function to calculate cosine similarity between two vectors
     fn cosine_similarity(&self, a: &[f64], b: &[f64]) -> f64 {
         let dot_product: f64 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
         let norm_a: f64 = a.iter().map(|x| x * x).sum::<f64>().sqrt();
         let norm_b: f64 = b.iter().map(|x| x * x).sum::<f64>().sqrt();
-        
+
         if norm_a == 0.0 || norm_b == 0.0 {
             return 0.0;
         }
-        
+
         dot_product / (norm_a * norm_b)
     }
 
@@ -222,6 +221,10 @@ impl InMemoryVectorStore {
         }
 
         Ok(())
+    }
+
+    pub fn get_all(&self) -> Vec<DataEntry> {
+        self.data_entries.clone()
     }
 }
 
@@ -291,10 +294,7 @@ impl VectorStore for InMemoryVectorStore {
 
         let new_vector: Vec<f64> = vector.get_vector();
 
-        let data_entries: Vec<DataEntry> = self.kv_search(
-            new_vector, 
-            top_n
-        )?;
+        let data_entries: Vec<DataEntry> = self.kv_search(new_vector, top_n)?;
 
         Ok(data_entries)
     }

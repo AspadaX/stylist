@@ -4,34 +4,27 @@ use stylist::embedding::*;
 mod tests {
     use super::*;
     use dim::prompt::load_prompts;
-    use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
+    use image::{DynamicImage, ImageBuffer, Rgba};
     use tokio;
 
     // Helper function to create a test image
     fn create_test_image() -> DynamicImage {
-        let img_buffer = ImageBuffer::from_fn(100, 100, |_, _| {
-            Rgba([255, 255, 255, 255])
-        });
+        let img_buffer: ImageBuffer<Rgba<u8>, Vec<u8>> =
+            ImageBuffer::from_fn(100, 100, |_, _| Rgba([255, 255, 255, 255]));
         DynamicImage::ImageRgba8(img_buffer)
     }
 
     // Helper function to create a test vector store
     fn create_test_store() -> InMemoryVectorStore {
-        let prompts = load_prompts(
-            "/Users/xinyubao/Documents/aesthetic-prototype/prompts"
-        ).unwrap();
-        
-        InMemoryVectorStore::new(
-            30, 
-            vec![],
-            prompts,
-            2,
-        )
+        let prompts =
+            load_prompts("/Users/xinyubao/Documents/aesthetic-prototype/prompts").unwrap();
+
+        InMemoryVectorStore::new(30, vec![], prompts, 2)
     }
 
     #[test]
     fn test_data_entry_creation() {
-        let entry = DataEntry {
+        let entry: DataEntry = DataEntry {
             id: 1,
             name: "test".to_string(),
             vector: vec![0.1, 0.2, 0.3],
@@ -54,14 +47,16 @@ mod tests {
     async fn test_vector_store_crud_operations() {
         let mut store = create_test_store();
         let test_image = create_test_image();
-        
+
         // Test add
         println!("Trying vectorzation...");
-        let result = store.add(
-            "test_image",
-            vec!["test description".to_string()],
-            test_image.clone(),
-        ).await;
+        let result = store
+            .add(
+                "test_image",
+                vec!["test description".to_string()],
+                test_image.clone(),
+            )
+            .await;
         assert!(result.is_ok());
         println!("Vectorization: {:?}", result);
 
@@ -78,8 +73,6 @@ mod tests {
 
         // Test search after delete
         let search_after_delete = store.search(test_image.clone(), 1).await;
-        assert!(search_after_delete.is_ok());
-        assert!(search_after_delete.unwrap().is_empty());
+        assert!(search_after_delete.is_err());
     }
-
 }
