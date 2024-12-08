@@ -77,6 +77,7 @@ pub trait VectorStore {
 }
 
 /// In-memory implementation of a vector store
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct InMemoryVectorStore {
     /// Storage for data entry metadata
     data_entries: Vec<DataEntry>,

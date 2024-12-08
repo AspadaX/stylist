@@ -240,9 +240,75 @@ async fn calculate_similarity(
     }
 }
 
+/// Save the vector stores to disk
+/// 
+/// # HTTP Request
+/// GET /api/store/save
+/// 
+/// # Request Body
+/// Empty
+#[get("/api/store/save")]
+async fn save_store(shared_stores: Data<Arc<Mutex<SharedStores>>>) -> impl Responder {
+    info!("Handling request to save stores to disk");
+    let shared_stores = shared_stores.lock().await;
+
+    match shared_stores.save("vector_stores.json").await {
+        Ok(_) => {
+            info!("Successfully saved vector stores to disk");
+            HttpResponse::Ok().json(BasicResponse::<String> {
+                status: true,
+                message: "Vector stores saved successfully".to_string(),
+                data: None,
+            })
+        }
+        Err(e) => {
+            error!("Failed to save vector stores: {}", e);
+            HttpResponse::InternalServerError().json(BasicResponse::<String> {
+                status: false,
+                message: format!("Failed to save vector stores: {}", e),
+                data: None,
+            })
+        }
+    }
+}
+
+/// Load the vector stores from disk
+/// 
+/// # HTTP Request
+/// GET /api/store/load
+/// 
+/// # Request Body
+/// Empty
+#[get("/api/store/load")]
+async fn load_store(shared_stores: Data<Arc<Mutex<SharedStores>>>) -> impl Responder {
+    info!("Handling request to load stores from disk");
+    let shared_stores = shared_stores.lock().await;
+
+    match shared_stores.load("vector_stores.json").await {
+        Ok(_) => {
+            info!("Successfully loaded vector stores from disk");
+            HttpResponse::Ok().json(BasicResponse::<String> {
+                status: true,
+                message: "Vector stores loaded successfully".to_string(),
+                data: None,
+            })
+        }
+        Err(e) => {
+            error!("Failed to load vector stores: {}", e);
+            HttpResponse::InternalServerError().json(BasicResponse::<String> {
+                status: false,
+                message: format!("Failed to load vector stores: {}", e),
+                data: None,
+            })
+        }
+    }
+}
+
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(upload_clothes)
         .service(get_clothes)
         .service(delete_clothes)
-        .service(calculate_similarity);
+        .service(calculate_similarity)
+        .service(save_store)
+        .service(load_store);
 }

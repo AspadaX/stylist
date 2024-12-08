@@ -1,5 +1,6 @@
 mod embedding;
 mod routes;
+mod store;
 
 use std::{sync::Arc, time::Duration};
 
@@ -9,12 +10,9 @@ use dim::{self, prompt::load_prompts};
 
 use embedding::InMemoryVectorStore;
 use log::info;
-use tokio::{self, sync::Mutex};
+use store::SharedStores;
+use tokio::sync::Mutex;
 
-pub struct SharedStores {
-    pub clothes: Arc<Mutex<InMemoryVectorStore>>,
-    pub face: Arc<Mutex<InMemoryVectorStore>>,
-}
 
 // Helper function to create a test vector store
 pub fn initialize_clothes_store() -> InMemoryVectorStore {
