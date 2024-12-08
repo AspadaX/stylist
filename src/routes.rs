@@ -198,7 +198,7 @@ async fn delete_clothes(
 /// 
 /// # Request Body
 /// JSON object containing base64 encoded image and number of results to return
-#[post("")]
+#[post("/api/similarity/calculate")]
 async fn calculate_similarity(
     shared_stores: Data<Arc<Mutex<SharedStores>>>,
     request: web::Json<SimilarityRequest>,
