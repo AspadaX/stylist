@@ -15,10 +15,10 @@ use tokio::sync::Mutex;
 use crate::{embedding::VectorStore, SharedStores};
 
 /// Decodes a base64 encoded image string into a DynamicImage
-/// 
+///
 /// # Arguments
 /// * `b64_str` - Base64 encoded string of the image
-/// 
+///
 /// # Returns
 /// * `Result<DynamicImage, Error>` - The decoded image or an error
 pub fn decode_base64_image(b64_str: &str) -> Result<DynamicImage, Error> {
@@ -79,10 +79,10 @@ pub struct BasicResponse<T: Serialize> {
 }
 
 /// Upload a new piece of clothing
-/// 
+///
 /// # HTTP Request
 /// POST /api/clothes/upload
-/// 
+///
 /// # Request Body
 /// JSON object containing name, gender and base64 encoded image
 #[post("/api/clothes/upload")]
@@ -134,7 +134,7 @@ async fn upload_clothes(
 }
 
 /// Get all clothes
-/// 
+///
 /// # HTTP Request
 /// GET /api/clothes/get
 #[get("/api/clothes/get")]
@@ -146,10 +146,10 @@ async fn get_clothes(shared_stores: Data<Arc<Mutex<SharedStores>>>) -> impl Resp
 }
 
 /// Delete a piece of clothing by ID
-/// 
+///
 /// # HTTP Request
 /// DELETE /api/clothes/delete/{id}
-/// 
+///
 /// # URL Parameters
 /// * `id` - The ID of the clothing item to delete
 #[delete("/api/clothes/delete/{id}")]
@@ -192,10 +192,10 @@ async fn delete_clothes(
 }
 
 /// Calculate similarity between uploaded image and stored clothes
-/// 
+///
 /// # HTTP Request
 /// POST /api/similarity/calculate
-/// 
+///
 /// # Request Body
 /// JSON object containing base64 encoded image and number of results to return
 #[post("/api/similarity/calculate")]
@@ -241,10 +241,10 @@ async fn calculate_similarity(
 }
 
 /// Save the vector stores to disk
-/// 
+///
 /// # HTTP Request
 /// GET /api/store/save
-/// 
+///
 /// # Request Body
 /// Empty
 #[get("/api/store/save")]
@@ -273,10 +273,10 @@ async fn save_store(shared_stores: Data<Arc<Mutex<SharedStores>>>) -> impl Respo
 }
 
 /// Load the vector stores from disk
-/// 
+///
 /// # HTTP Request
 /// GET /api/store/load
-/// 
+///
 /// # Request Body
 /// Empty
 #[get("/api/store/load")]

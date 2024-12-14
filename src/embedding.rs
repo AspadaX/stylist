@@ -40,6 +40,12 @@ pub struct DataEntry {
     pub descriptions: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub score: f64,
+    pub data_entry: DataEntry,
+}
+
 /// Defines essential operations that must be implemented by vector stores
 pub trait VectorStore {
     /// Search for similar entries given an image
@@ -47,7 +53,7 @@ pub trait VectorStore {
     /// # Arguments
     /// * `image` - The image to search for similar entries
     /// * `top_n` - Number of most similar entries to return
-    async fn search(&self, image: DynamicImage, top_n: usize) -> Result<Vec<DataEntry>, Error>;
+    async fn search(&self, image: DynamicImage, top_n: usize) -> Result<Vec<SearchResult>, Error>;
 
     /// Add a new entry to the vector store
     ///
@@ -145,7 +151,7 @@ impl InMemoryVectorStore {
     ///
     /// # Arguments
     /// * `id` - ID of entry to retrieve
-    fn kv_search(&self, query_vector: Vec<f64>, top_n: usize) -> Result<Vec<DataEntry>, Error> {
+    fn kv_search(&self, query_vector: Vec<f64>, top_n: usize) -> Result<Vec<SearchResult>, Error> {
         if self.data_entries.is_empty() {
             return Err(DataEntryErrors::NoDataWasFound.into());
         }
@@ -162,10 +168,13 @@ impl InMemoryVectorStore {
         similarities.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
         // Take top n entries
-        let top_entries: Vec<DataEntry> = similarities
+        let top_entries: Vec<SearchResult> = similarities
             .into_iter()
             .take(top_n)
-            .map(|(idx, _)| self.data_entries[idx].clone())
+            .map(|(idx, score)| SearchResult {
+                data_entry: self.data_entries[idx].clone(),
+                score: score,
+            })
             .collect();
 
         if top_entries.is_empty() {
@@ -279,7 +288,7 @@ impl VectorStore for InMemoryVectorStore {
         Ok(())
     }
 
-    async fn search(&self, image: DynamicImage, top_n: usize) -> Result<Vec<DataEntry>, Error> {
+    async fn search(&self, image: DynamicImage, top_n: usize) -> Result<Vec<SearchResult>, Error> {
         let client: Client<OpenAIConfig> = instantiate_client::<OpenAIConfig>(None)?;
 
         // initialize the vectorization mechanics
@@ -295,7 +304,7 @@ impl VectorStore for InMemoryVectorStore {
 
         let new_vector: Vec<f64> = vector.get_vector();
 
-        let data_entries: Vec<DataEntry> = self.kv_search(new_vector, top_n)?;
+        let data_entries: Vec<SearchResult> = self.kv_search(new_vector, top_n)?;
 
         Ok(data_entries)
     }

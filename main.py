@@ -1,153 +1,76 @@
 import os
-
+import base64
 import streamlit as st
-
+from io import BytesIO
 from python_src.StylistAPIComponent import Gender, StylistAPIComponent
 
-st.set_page_config(page_title="Fashion Similarity Finder", layout="wide")
+st.set_page_config(page_title="Face-Based Clothes Recommendation", layout="wide")
 
 API_BASE_URL = "http://localhost:9500"  # Adjust if needed
 api = StylistAPIComponent(API_BASE_URL)
 
 def main():
-    st.title("Fashion Similarity Finder")
+    st.title("Face-Based Clothes Recommendation")
 
-    st.sidebar.header("Controls")
-    page = st.sidebar.radio("Select Page", ["Upload Clothes", "View Clothes", "Find Similar"])
-
-    if page == "Upload Clothes":
-        upload_clothes_page()
-    elif page == "View Clothes":
-        view_clothes_page()
-    elif page == "Find Similar":
-        find_similar_page()
-
-def upload_clothes_page():
+    # Upload Clothes Section
     st.header("Upload Clothes")
-    upload_mode = st.radio("Upload Mode", ["Single", "Batch"])
+    uploaded_clothes = st.file_uploader("Choose clothes images", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
+    if uploaded_clothes:
+        for file in uploaded_clothes:
+            temp_path = f"temp_clothes_{file.name}"
+            with open(temp_path, "wb") as f:
+                f.write(file.getbuffer())
+            name = os.path.splitext(file.name)[0]
+            try:
+                api.upload_clothes(name, Gender.MALE, temp_path)
+                st.success(f"Uploaded {name}")
+            except Exception as e:
+                st.error(f"Error uploading {name}: {str(e)}")
+            finally:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
 
-    if upload_mode == "Single":
-        # Single upload form
-        with st.form("single_upload_form"):
-            name = st.text_input("Clothing Name")
-            gender = st.selectbox("Gender", [Gender.MALE.value, Gender.FEMALE.value])
-            uploaded_file = st.file_uploader("Choose an image", type=['png', 'jpg', 'jpeg'])
+    # Upload Face Image Section
+    st.header("Upload Face Image")
+    face_file = st.file_uploader("Upload a face image", type=['png', 'jpg', 'jpeg'])
+    top_n = st.slider("Number of items to recommend", 1, 10, 5)
 
-            submit = st.form_submit_button("Upload")
-            if submit and uploaded_file and name:
-                temp_path = f"temp_{uploaded_file.name}"
-                with open(temp_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-
-                try:
-                    api.upload_clothes(name, Gender(gender), temp_path)
-                    st.success("Successfully uploaded clothing item!")
-                    st.image(uploaded_file, caption=name, width=300)
-                except Exception as e:
-                    st.error(f"Error uploading: {str(e)}")
-                finally:
-                    if os.path.exists(temp_path):
-                        os.remove(temp_path)
-
-    else:
-        # Batch upload mode
-        uploaded_files = st.file_uploader("Choose images", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
-        if uploaded_files:
-            with st.form("batch_upload_form"):
-                st.write("Provide details for each item:")
-                items = []
-                for idx, file in enumerate(uploaded_files):
-                    st.write(f"**Item {idx+1}: {file.name}**")
-                    name = st.text_input("Clothing Name", key=f"name_{idx}")
-                    gender = st.selectbox("Gender", [Gender.MALE.value, Gender.FEMALE.value], key=f"gender_{idx}")
-                    items.append((file, name, gender))
+    # Compute Similarities Button
+    if st.button("Compute Similarities"):
+        if face_file is None:
+            st.error("Please upload a face image first.")
+        else:
+            temp_path_face = f"temp_face_{face_file.name}"
+            with open(temp_path_face, "wb") as f:
+                f.write(face_file.getbuffer())
                 
-                submit_all = st.form_submit_button("Upload All")
-                if submit_all:
-                    all_uploaded = True
-                    for file, n, g in items:
-                        if file and n:
-                            temp_path = f"temp_{file.name}"
-                            with open(temp_path, "wb") as f:
-                                f.write(file.getbuffer())
-                            try:
-                                api.upload_clothes(n, Gender(g), temp_path)
-                            except Exception as e:
-                                st.error(f"Error uploading {n}: {str(e)}")
-                                all_uploaded = False
-                            finally:
-                                if os.path.exists(temp_path):
-                                    os.remove(temp_path)
-                    if all_uploaded:
-                        st.success("All items uploaded successfully!")
+            st.subheader("Your face image:")
+            st.image(face_file, width=300)
 
-def view_clothes_page():
-    st.header("View Clothes")
-    try:
-        clothes = api.get_clothes()
-        if not clothes:
-            st.info("No clothes found in the database.")
-            return
-
-        cols = st.columns(3)
-        for idx, item in enumerate(clothes):
-            with cols[idx % 3]:
-                st.subheader(item['name'])
-                st.write(f"ID: {item['id']}")
-                st.write(f"Descriptions: {item['descriptions']}")
-                
-                image_data = item.get('image', '')
-                if image_data:
-                    import base64
-                    from io import BytesIO
-                    image_bytes = base64.b64decode(image_data)
-                    st.image(BytesIO(image_bytes), use_column_width=True)
-                
-                if st.button(f"Delete {item['name']}", key=f"delete_{idx}"):
-                    api.delete_clothes(item['id'])
-                    st.rerun()
-
-    except Exception as e:
-        st.error(f"Error loading clothes: {str(e)}")
-
-def find_similar_page():
-    st.header("Find Similar Clothes")
-    
-    uploaded_file = st.file_uploader("Upload an image to find similar clothes", type=['png', 'jpg', 'jpeg'])
-    top_n = st.slider("Number of similar items to find", 1, 10, 5)
-    
-    if uploaded_file:
-        temp_path = f"temp_search_{uploaded_file.name}"
-        with open(temp_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-            
-        try:
-            st.subheader("Your uploaded image:")
-            st.image(uploaded_file, width=300)
-            
-            results = api.calculate_similarity(temp_path, top_n)
-            
-            st.subheader("Similar items found:")
-            cols = st.columns(3)
-            for idx, item in enumerate(results.get('data', [])):
-                with cols[idx % 3]:
-                    st.write(f"**{item['name']}**")
-                    st.write(f"ID: {item['descriptions']}")
-                    st.write(f"Descriptions: {item['descriptions']}")
-                    # st.write(f"Similarity: {item['similarity']:.2f}")
-                    
-                    image_data = item.get('image', '')
-                    if image_data:
-                        import base64
-                        from io import BytesIO
-                        image_bytes = base64.b64decode(image_data)
-                        st.image(BytesIO(image_bytes), use_column_width=True)
-                        
-        except Exception as e:
-            st.error(f"Error finding similar items: {str(e)}")
-        finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            try:
+                results = api.calculate_similarity(temp_path_face, top_n)
+                st.subheader("Recommended Clothes (ordered by score):")
+                recommended = results.get('data', [])
+                if recommended:
+                    cols = st.columns(3)
+                    for idx, item in enumerate(recommended):
+                        with cols[idx % 3]:
+                            st.write(f"**{item['data_entry']['name']}**")
+                            desc = item.get('data_entry', {}).get('descriptions', [])
+                            st.write("Descriptions: " + ", ".join(desc) if desc else "No description")
+                            st.write(f"Score: {item['score']}")
+                            
+                            image_data = item.get('data_entry', {}).get('image', '')
+                            if image_data:
+                                image_bytes = base64.b64decode(image_data)
+                                st.image(BytesIO(image_bytes), use_column_width=True)
+                else:
+                    st.info("No recommendations found.")
+            except Exception as e:
+                st.error(f"Error finding recommendations: {str(e)}")
+            finally:
+                if os.path.exists(temp_path_face):
+                    os.remove(temp_path_face)
 
 if __name__ == "__main__":
     main()

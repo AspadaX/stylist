@@ -1,4 +1,8 @@
-use std::{fs::File, io::{BufReader, BufWriter}, sync::Arc};
+use std::{
+    fs::File,
+    io::{BufReader, BufWriter},
+    sync::Arc,
+};
 
 use crate::embedding::InMemoryVectorStore;
 use anyhow::Error;

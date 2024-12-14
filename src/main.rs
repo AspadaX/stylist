@@ -13,7 +13,6 @@ use log::info;
 use store::SharedStores;
 use tokio::sync::Mutex;
 
-
 // Helper function to create a test vector store
 pub fn initialize_clothes_store() -> InMemoryVectorStore {
     let prompts: Vec<String> =
